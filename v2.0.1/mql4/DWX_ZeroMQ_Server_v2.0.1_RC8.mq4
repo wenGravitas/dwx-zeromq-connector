@@ -264,7 +264,11 @@ void OnTimer() {
       if (request.size() > 0) {
          // Wait 
          // pullSocket.recv(request,false);
-         
+         // Print the received message for debugging
+         ArrayResize(_data, request.size());
+         request.getData(_data);
+         string receivedMessage = CharArrayToString(_data);
+         Print("Received message: " + receivedMessage);
          // MessageHandler() should go here.   
          ZmqMsg reply = MessageHandler(request);
          
@@ -372,6 +376,21 @@ void InterpretZmqMessage(Socket &pSocket, string &compArray[]) {
    */
    
    int switch_action = 0;
+   
+       if (compArray[0] == "GET_INSTRUMENTS") {
+        string zmq_ret = "";
+        DWX_GetAvailableSymbols(zmq_ret);
+        InformPullClient(pSocket, zmq_ret);
+    }
+   
+   if (compArray[0] == "GET_WATCHLIST_INSTRUMENTS") {
+        string zmq_ret = "";
+        DWX_GetWatchlistSymbols(zmq_ret);
+        InformPullClient(pSocket, zmq_ret);
+    }
+   
+   
+   
    
    /* 02-08-2019 10:41 CEST - HEARTBEAT */
    if(compArray[0] == "HEARTBEAT")
@@ -777,7 +796,7 @@ string GetTimeframeText(ENUM_TIMEFRAMES tf) {
 
 // Inform Client
 void InformPullClient(Socket& pSocket, string message) {
-
+Print("Sending message to client: " + message);
    ZmqMsg pushReply(message);
    
    pSocket.send(pushReply,true); // NON-BLOCKING
@@ -1296,6 +1315,49 @@ string ErrorDescription(int error_code) {
       }
    return(error_string);
 }
+ 
+ void DWX_GetWatchlistSymbols(string &zmq_ret) {
+    zmq_ret = "'_action': 'GET_WATCHLIST_INSTRUMENTS', '_data': [";
+    
+    int totalSymbols = SymbolsTotal(false);  // Get number of available symbols
+    string watchlist = "";
+    
+    for (int i = 0; i < totalSymbols; i++) {
+        string symbol = SymbolName(i, false);
+        
+        // Check if the symbol is in the Market Watch using SYMBOL_SELECT
+        if (SymbolInfoInteger(symbol, SYMBOL_SELECT)) {
+            if (watchlist != "")
+                watchlist += ", ";
+            
+            watchlist += "'" + symbol + "'";
+        }
+    }
+
+    zmq_ret += watchlist + "]";
+}
+
+
+ 
+ void DWX_GetAvailableSymbols(string &zmq_ret) {
+    zmq_ret = "'_action': 'GET_INSTRUMENTS', '_data': [";
+    
+    int totalSymbols = SymbolsTotal(false);  // Get number of available symbols
+    string symbolList = "";
+
+    for (int i = 0; i < totalSymbols; i++) {
+        string symbol = SymbolName(i, false);
+        
+        if (i == totalSymbols - 1)
+            symbolList += "'" + symbol + "'";  // No comma for the last symbol
+        else
+            symbolList += "'" + symbol + "', ";
+    }
+
+    zmq_ret += symbolList + "]";
+}
+
+ 
   
 //+------------------------------------------------------------------+
 
