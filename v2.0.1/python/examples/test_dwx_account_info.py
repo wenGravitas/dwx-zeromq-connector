@@ -27,7 +27,7 @@ class DWXTestClient:
 
     def test_account_info(self):
         print("Requesting account information...")
-        self.send_command("GET_ACCOUNT_INFO")
+        self.send_command("TRADE;GET_ACCOUNT_INFO")
         time.sleep(1)  # Wait for the response
         response = self.receive_response()
         print("Received response:", response)
